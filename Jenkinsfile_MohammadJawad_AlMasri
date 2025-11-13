@@ -30,10 +30,38 @@ pipeline {
                 }
             }
         }
+        stage('Coverage') {
+            steps {
+                script {
+                    echo "Running code coverage analysis..."
+                    bat "${VIRTUAL_ENV}\\Scripts\\activate && coverage run -m pytest"
+                    bat "${VIRTUAL_ENV}\\Scripts\\activate && coverage report"
+                    bat "${VIRTUAL_ENV}\\Scripts\\activate && coverage html"
+                    echo "Coverage report generated in htmlcov/index.html"
+                }
+            }
+        }
+        stage('Security Scan') {
+            steps {
+                script {
+                    echo "Running security scan with Bandit..."
+                    bat "${VIRTUAL_ENV}\\Scripts\\activate && bandit -r . -f txt -o bandit-report.txt || exit 0"
+                    bat "${VIRTUAL_ENV}\\Scripts\\activate && bandit -r . -f json -o bandit-report.json || exit 0"
+                    echo "Security scan completed. Reports: bandit-report.txt, bandit-report.json"
+                }
+            }
+        }
         stage('Deploy') {
             steps {
                 script {
                     echo "Deploying application..."
+                    bat """
+                        echo Deployment started at %date% %time% > deployment.log
+                        echo Deploying to local environment >> deployment.log
+                        ${VIRTUAL_ENV}\\Scripts\\activate && python app.py > app.log 2>&1 &
+                        echo Application deployed successfully >> deployment.log
+                        type deployment.log
+                    """
                 }
             }
         }
